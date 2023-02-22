@@ -70,8 +70,6 @@ city_id = 709932
 
 import sys
 
-if __name__ == '__main__':
-
 if len(sys.argv) == 2:
     s_city_name = sys.argv[1]
     print("city:", s_city_name)
