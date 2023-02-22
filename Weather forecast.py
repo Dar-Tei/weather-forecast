@@ -68,6 +68,8 @@ def request_forecast(city_id):
 
 city_id = 709932
 
+if __name__ == '__main__':
+    
 import sys
 
 if len(sys.argv) == 2:
@@ -79,3 +81,4 @@ elif len(sys.argv) > 2:
     sys.exit()
 
 request_forecast(city_id)
+
