@@ -1,81 +1,52 @@
-appid = "126cf75682cd91a2e4c9a1d69a5c1d26"
-s_city = "Kamianske,UA"
 import requests
+from datetime import datetime
 
 
-def get_wind_direction(deg):
-    l = ['Пн.    ', 'Пн. Сх.', 'Сх.    ', 'Пд. Сх.', 'Пд.    ', 'Пд. Зх.', 'Зх.    ', 'Пн. Зх.']
-    for i in range(0, 8):
-        step = 45.
-        min = i * step - 45 / 2.
-        max = i * step + 45 / 2.
-        if i == 0 and deg > 360 - 45 / 2.:
-            deg = deg - 360
-        if deg >= min and deg <= max:
-            res = l[i]
-            break
-    return res
+class WeatherAPIFacade:
+    def __init__(self, api_key):
+        self.api_key = api_key
+
+    def get_forecast(self, city_name, language):
+        url = f'http://api.openweathermap.org/data/2.5/forecast?q={city_name}&appid={self.api_key}&lang={language}&units=metric'
+        response = requests.get(url)
+        response_data = response.json()
+        forecast_data = response_data['list']
+        city_data = response_data['city']
+        city_name = city_data['name']
+        forecast = []
+        print(city_name + ":")
+        if language == "ua":
+            for data in forecast_data:
+                date = datetime.strptime(data['dt_txt'], '%Y-%m-%d %H:%M:%S')
+                date_str = date.strftime('%d.%m.%Y')
+                temp = data['main']['temp']
+                clouds = data['weather'][0]['description']
+                wind_dir = self.deg_to_dir(data['wind']['deg'])
+                forecast.append(f'\nДата: {date_str}, Тепература: {temp}°C, Хмарність: {clouds}, Напрямок вітру: {wind_dir}')
+        else:
+            for data in forecast_data:
+                date = datetime.strptime(data['dt_txt'], '%Y-%m-%d %H:%M:%S')
+                date_str = date.strftime('%d-%m-%Y')
+                temp = data['main']['temp']
+                clouds = data['weather'][0]['description']
+                wind_dir = self.deg_to_dir(data['wind']['deg'])
+                forecast.append(f'\nDate: {date_str}, temperature: {temp}°C, cloud cover: {clouds}, wind direction: {wind_dir}')
+        return '\n'.join(forecast)
+
+    @staticmethod
+    def deg_to_dir(degrees):
+        if language == "ua":
+            compass = ['Пн', 'Пн.Сх', 'Сх', 'Пв.Сх', 'Пв.', 'Пв.Зх', 'Зх', 'Пн.Зх']
+        else:
+            compass = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
+        index = int((degrees / 45) + 0.5) % 8
+        return compass[index]
 
 
-def get_city_id(s_city_name):
-    try:
-        res = requests.get("http://api.openweathermap.org/data/2.5/find",
-                           params={'q': s_city_name, 'type': 'like', 'units': 'metric', 'lang': 'ua', 'APPID': appid})
-        data = res.json()
-        cities = ["{} ({})".format(d['name'], d['sys']['country'])
-                  for d in data['list']]
-        print("city:", cities)
-        city_id = data['list'][0]['id']
-        print('city_id=', city_id)
-    except Exception as e:
-        print("Exception (find):", e)
-        pass
-    assert isinstance(city_id, int)
-    return city_id
-
-
-def request_current_weather(city_id):
-    try:
-        res = requests.get("http://api.openweathermap.org/data/2.5/weather",
-                           params={'id': city_id, 'units': 'metric', 'lang': 'ua', 'APPID': appid})
-        data = res.json()
-        print("conditions:", data['weather'][0]['description'])
-        print("temp:", data['main']['temp'])
-        print("temp_min:", data['main']['temp_min'])
-        print("temp_max:", data['main']['temp_max'])
-        print("data:", data)
-    except Exception as e:
-        print("Exception (weather):", e)
-        pass
-
-
-def request_forecast(city_id):
-    try:
-        res = requests.get("http://api.openweathermap.org/data/2.5/forecast",
-                           params={'id': city_id, 'units': 'metric', 'lang': 'ua', 'APPID': appid})
-        data = res.json()
-        print('city:', data['city']['name'], data['city']['country'])
-        for i in data['list']:
-            print((i['dt_txt'])[:16], '{0:+3.0f}'.format(i['main']['temp']),
-                  '{0:2.0f}'.format(i['wind']['speed']) + " м/с",
-                  get_wind_direction(i['wind']['deg']),
-                  i['weather'][0]['description'])
-    except Exception as e:
-        print("Exception (forecast):", e)
-        pass
-
-
-
-city_id = 709932
-
-import sys
-
-if len(sys.argv) == 2:
-    s_city_name = sys.argv[1]
-    print("city:", s_city_name)
-    city_id = get_city_id(s_city_name)
-elif len(sys.argv) > 2:
-    print('Enter name of city as one argument. For example: Kamianske,UA')
-    sys.exit()
-
-request_forecast(city_id)
+if __name__ == '__main__':
+    api_key = input('Enter API key: ')
+    city_name = input('Enter city name: ')
+    language = input('Enter language code (e.g. "en" for English): ')
+    weather_api = WeatherAPIFacade(api_key)
+    forecast = weather_api.get_forecast(city_name, language)
+    print(forecast)
